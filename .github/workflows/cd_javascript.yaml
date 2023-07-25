@@ -1,0 +1,107 @@
+name: Docker Deploy Template
+on:
+    workflow_call:
+        inputs:
+            keyvaultfile:
+                description: The keyvault file name
+                required: true
+                type: string
+            tag:
+                description: The tag for the image
+                required: true
+                type: string
+            slot_name:
+                description: The slot name where the app should be deployed
+                required: false
+                type: string
+                default: stage
+            environment:
+                description: Environment this needs to be deployed on
+                required: true
+                type: string
+            swap_slot:
+                description: Set to true to swap the slot
+                required: false
+                type: boolean
+                default: false
+
+
+jobs:
+    Deploy:
+        environment: ${{inputs.environment}}
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Az CLI login
+              uses: azure/login@v1
+              with:
+                client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+                enable-AzPSSession: true
+            
+            - name: Find var file name
+              shell: bash
+              run: |
+                file=$(find . -name ${{inputs.keyvaultfile}})
+                echo "$file"
+                echo "kv_file="$file"" >> $GITHUB_ENV
+
+
+            - name: Get Registry and Repository name
+              uses: azure/powershell@v1
+              id: variablenames
+              with:
+                  inlineScript: |
+                    $keyvaultToVarsContent = Get-Content ${{env.kv_file}} | ConvertFrom-Json
+                    $keyvaultname = $keyvaultToVarsContent.${{inputs.environment}}.keyvaultname
+
+                    $registry = $keyvaultToVarsContent.${{inputs.environment}}.registry_name
+                    Write-Output "registry_name=$($registry)"
+
+                    $repository = $keyvaultToVarsContent.${{inputs.environment}}.repository_name
+                    Write-Output "repository_name=$($repository)"
+
+                    $appname = $keyvaultToVarsContent.${{inputs.environment}}.app_service_name
+                    Write-Output "web_app_name=$($appname)"
+
+            - name: Update App service settings
+              uses: azure/appservice-settings@v1
+              with:
+                app-name: ${{steps.variablenames.web_app_name}}
+                slot-name: ${{inputs.slot_name}}
+                app-settings-json: ${{secrets.APPSETTINGS}}
+
+
+            - name: Deploy to Webapp
+              uses: azure/webapps-deploy@v2
+              with:
+                app-name: ${{steps.variablenames.web_app_name}}
+                images: ${{steps.variablenames.registry_name}}.azurecr.io/${{steps.variablenames.repository_name}}:${{ inputs.tag }}
+                slot-name: ${{inputs.slot_name}}
+
+            - name: Sleep
+              if: ${{ inputs.swap_slot }}
+              run: |
+                sleep 90
+            
+            - name: Swap Slots
+              if: ${{ inputs.swap_slot }}
+              uses: azure/powershell@v1
+              with:
+                inlineScript: |
+                    $resourcegroup = $(Get-AzWebApp -Name ${{steps.variablenames.web_app_name}}.ResourceGroup
+                    Switch-AzWebAppSlot -SourceSlotName ${{inputs.slot_name}} -DestinationSlotName Production -ResourceGroupName $resourcegroup -Name ${{steps.variablenames.web_app_name}}
+                azPSVersion: "latest"
+              
+
+            - name: Azure Logout
+              uses: azure/CLI@v1
+              with:
+                inlineScript: |
+                    az logout
+                    az cache purge
+                    az account clear
