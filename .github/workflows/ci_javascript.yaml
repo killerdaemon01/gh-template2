@@ -1,0 +1,95 @@
+name: CI Javascript Docker Build Template
+on:
+    workflow_call:
+        inputs:
+            keyvaultfile:
+                description: The keyvault file name
+                required: true
+                type: string
+            environment:
+                description: The environment this would be running for
+                required: true
+                type: string
+            tag:
+                description: The tag used for the image
+                required: true
+                type: string
+
+
+
+jobs:
+    docker-build-push:
+        environment: ${{inputs.environment}}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+
+            - name: Az CLI login
+              uses: azure/login@v1
+              with:
+                client-id: ${{ secrets.AZURE_CLIENT_ID }}
+                tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+                subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+                enable-AzPSSession: true
+            
+            - name: Find var file name
+              shell: bash
+              run: |
+                file=$(find . -name ${{inputs.keyvaultfile}})
+                echo "$file"
+                echo "kv_file="$file"" >> $GITHUB_ENV
+
+
+            - name: Get Username and password from Keyvaults
+              uses: azure/powershell@v1
+              id: keyvaultsecrets
+              with:
+                  inlineScript: |
+                    $keyvaultToVarsContent = Get-Content ${{env.kv_file}} | ConvertFrom-Json
+                    $keyvaultname = $keyvaultToVarsContent.${{inputs.environment}}.keyvaultname
+                    Write-Output $keyvaultname
+                    Write-Output "---------------"
+                    $acusernamesecret = $keyvaultToVarsContent.${{inputs.environment}}.username
+                    Write-Output $acusernamesecret
+                    $acrpasswordsecret = $keyvaultToVarsContent.${{inputs.environment}}.password
+                    Write-Output $acrpasswordsecret
+
+                    $registry = $keyvaultToVarsContent.${{inputs.environment}}.registry_name
+                    Write-Output "registry_name=$($registry)"
+
+                    $repository = $keyvaultToVarsContent.${{inputs.environment}}.repository_name
+                    Write-Output "repository_name=$($repository)"
+
+                    $username = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $acusernamesecret -AsPlainText)
+                    Write-Output "username=$($username)" >> $Env:GITHUB_OUTPUT
+
+                    $password = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $acrpasswordsecret -AsPlainText)
+                    Write-Output "password=$($password)" >> $Env:GITHUB_OUTPUT
+
+
+                  azPSVersion: "latest"
+
+
+            - name: Azure Registry Login
+              uses: azure/docker-login@v1
+              with:
+                login-server: ${{steps.keyvaultsecrets.registry_name}}.azurecr.io
+                username: ${{steps.keyvaultsecrets.outputs.username}}
+                password: ${{steps.keyvaultsecrets.outputs.password}}
+
+
+            - name: Docker build and push
+              run: |
+                docker build . -t ${{steps.keyvaultsecrets.registry_name}}.azurecr.io/${{steps.keyvaultsecrets.repository_name}}:${{inputs.tag}}
+                docker push ${{steps.keyvaultsecrets.registry_name}}.azurecr.io/${{steps.keyvaultsecrets.repository_name}}:${{inputs.tag}}
+
+
+            - name: Azure Logout
+              uses: azure/CLI@v1
+              with:
+                inlineScript: |
+                    az logout
+                    az cache purge
+                    az account clear
