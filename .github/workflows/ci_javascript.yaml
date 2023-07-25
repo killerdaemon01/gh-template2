@@ -57,16 +57,18 @@ jobs:
                     Write-Output $acrpasswordsecret
 
                     $registry = $keyvaultToVarsContent.${{inputs.environment}}.registry_name
-                    Write-Output "registry_name=$($registry)" >> $GITHUB_ENV
+                    Write-Output $registry
+                    Write-Output "registry_name=$($registry)" >> $Env:GITHUB_OUTPUT
 
                     $repository = $keyvaultToVarsContent.${{inputs.environment}}.repository_name
-                    Write-Output "repository_name=$($repository)" >> $GITHUB_ENV
+                    Write-Output $repository
+                    Write-Output "repository_name=$($repository)" >> $Env:GITHUB_OUTPUT
 
                     $username = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $acusernamesecret -AsPlainText)
-                    Write-Output "username=$($username)" >> $GITHUB_ENV
+                    Write-Output "username=$($username)" >> $Env:GITHUB_OUTPUT
 
                     $password = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $acrpasswordsecret -AsPlainText)
-                    Write-Output "password=$($password)" >> $GITHUB_ENV
+                    Write-Output "password=$($password)" >> $Env:GITHUB_OUTPUT
 
 
                   azPSVersion: "latest"
@@ -75,15 +77,15 @@ jobs:
             - name: Azure Registry Login
               uses: azure/docker-login@v1
               with:
-                login-server: ${{env.registry_name}}.azurecr.io
-                username: ${{env.username}}
-                password: ${{env.password}}
+                login-server: ${{steps.keyvaultsecrets.registry_name}}.azurecr.io
+                username: ${{steps.keyvaultsecrets.outputs.username}}
+                password: ${{steps.keyvaultsecrets.outputs.password}}
 
 
             - name: Docker build and push
               run: |
-                docker build . -t ${{env.registry_name}}.azurecr.io/${{env.repository_name}}:${{inputs.tag}}
-                docker push ${{env.registry_name}}.azurecr.io/${{env.repository_name}}:${{inputs.tag}}
+                docker build . -t ${{steps.keyvaultsecrets.registry_name}}.azurecr.io/${{steps.keyvaultsecrets.repository_name}}:${{inputs.tag}}
+                docker push ${{steps.keyvaultsecrets.registry_name}}.azurecr.io/${{steps.keyvaultsecrets.repository_name}}:${{inputs.tag}}
 
 
             - name: Azure Logout
