@@ -67,6 +67,7 @@ jobs:
 
                     $web_app_name = $keyvaultToVarsContent.${{inputs.environment}}.app_service_name
                     Write-Output "web_app_name=$($web_app_name)" >> $Env:GITHUB_OUTPUT
+                  azPSVersion: "latest"
 
             - name: Update App service settings
               uses: azure/appservice-settings@v1
