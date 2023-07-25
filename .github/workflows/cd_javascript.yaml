@@ -72,7 +72,7 @@ jobs:
             - name: Update App service settings
               uses: azure/appservice-settings@v1
               with:
-                app-name: ${{steps.variablenames.web_app_name}}
+                app-name: ${{steps.variablenames.outputs.web_app_name}}
                 slot-name: ${{inputs.slot_name}}
                 app-settings-json: ${{secrets.APPSETTINGS}}
 
