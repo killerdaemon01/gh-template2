@@ -57,10 +57,10 @@ jobs:
                     Write-Output $acrpasswordsecret
 
                     $registry = $keyvaultToVarsContent.${{inputs.environment}}.registry_name
-                    Write-Output "registry_name=$($registry)"
+                    Write-Output "registry_name=$($registry)" >> $Env:GITHUB_OUTPUT
 
                     $repository = $keyvaultToVarsContent.${{inputs.environment}}.repository_name
-                    Write-Output "repository_name=$($repository)"
+                    Write-Output "repository_name=$($repository)" >> $Env:GITHUB_OUTPUT
 
                     $username = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $acusernamesecret -AsPlainText)
                     Write-Output "username=$($username)" >> $Env:GITHUB_OUTPUT
