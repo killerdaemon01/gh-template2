@@ -85,7 +85,7 @@ jobs:
             - name: Docker build and push
               run: |
                 docker build . -t ${{steps.keyvaultsecrets.outputs.registry_name}}.azurecr.io/${{steps.keyvaultsecrets.outputs.repository_name}}:${{inputs.tag}}
-                docker push $ ${{steps.keyvaultsecrets.outputs.registry_name}}.azurecr.io/${{steps.keyvaultsecrets.outputs.repository_name}}:${{inputs.tag}}
+                docker push ${{steps.keyvaultsecrets.outputs.registry_name}}.azurecr.io/${{steps.keyvaultsecrets.outputs.repository_name}}:${{inputs.tag}}
 
 
             - name: Azure Logout
