@@ -94,7 +94,7 @@ jobs:
               uses: azure/powershell@v1
               with:
                 inlineScript: |
-                    $resourcegroup = $(Get-AzWebApp -Name ${{steps.variablenames.outputs.web_app_name}}.ResourceGroup
+                    $resourcegroup = $(Get-AzWebApp -Name ${{steps.variablenames.outputs.web_app_name}}).ResourceGroup
                     Switch-AzWebAppSlot -SourceSlotName ${{inputs.slot_name}} -DestinationSlotName Production -ResourceGroupName $resourcegroup -Name ${{steps.variablenames.outputs.web_app_name}}
                 azPSVersion: "latest"
               
