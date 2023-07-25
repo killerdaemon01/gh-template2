@@ -65,9 +65,11 @@ jobs:
                     Write-Output "repository_name=$($repository_name)" >> $Env:GITHUB_OUTPUT
 
                     $username = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $acusernamesecret -AsPlainText)
+                    echo '::add-mask::$username'
                     Write-Output "username=$($username)" >> $Env:GITHUB_OUTPUT
 
                     $password = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $acrpasswordsecret -AsPlainText)
+                    echo '::add-mask::$password'
                     Write-Output "password=$($password)" >> $Env:GITHUB_OUTPUT
 
 
