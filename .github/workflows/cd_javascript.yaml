@@ -59,14 +59,14 @@ jobs:
                     $keyvaultToVarsContent = Get-Content ${{env.kv_file}} | ConvertFrom-Json
                     $keyvaultname = $keyvaultToVarsContent.${{inputs.environment}}.keyvaultname
 
-                    $registry = $keyvaultToVarsContent.${{inputs.environment}}.registry_name
-                    Write-Output "registry_name=$($registry)"
+                    $registry_name = $keyvaultToVarsContent.${{inputs.environment}}.registry_name
+                    Write-Output "registry_name=$($registry_name)" >> $Env:GITHUB_OUTPUT
 
-                    $repository = $keyvaultToVarsContent.${{inputs.environment}}.repository_name
-                    Write-Output "repository_name=$($repository)"
+                    $repository_name = $keyvaultToVarsContent.${{inputs.environment}}.repository_name
+                    Write-Output "repository_name=$($repository_name)" >> $Env:GITHUB_OUTPUT
 
-                    $appname = $keyvaultToVarsContent.${{inputs.environment}}.app_service_name
-                    Write-Output "web_app_name=$($appname)"
+                    $web_app_name = $keyvaultToVarsContent.${{inputs.environment}}.app_service_name
+                    Write-Output "web_app_name=$($web_app_name)" >> $Env:GITHUB_OUTPUT
 
             - name: Update App service settings
               uses: azure/appservice-settings@v1
@@ -79,8 +79,8 @@ jobs:
             - name: Deploy to Webapp
               uses: azure/webapps-deploy@v2
               with:
-                app-name: ${{steps.variablenames.web_app_name}}
-                images: ${{steps.variablenames.registry_name}}.azurecr.io/${{steps.variablenames.repository_name}}:${{ inputs.tag }}
+                app-name: ${{steps.variablenames.outputs.web_app_name}}
+                images: ${{steps.variablenames.outputs.registry_name}}.azurecr.io/${{steps.variablenames.outputs.repository_name}}:${{ inputs.tag }}
                 slot-name: ${{inputs.slot_name}}
 
             - name: Sleep
@@ -93,8 +93,8 @@ jobs:
               uses: azure/powershell@v1
               with:
                 inlineScript: |
-                    $resourcegroup = $(Get-AzWebApp -Name ${{steps.variablenames.web_app_name}}.ResourceGroup
-                    Switch-AzWebAppSlot -SourceSlotName ${{inputs.slot_name}} -DestinationSlotName Production -ResourceGroupName $resourcegroup -Name ${{steps.variablenames.web_app_name}}
+                    $resourcegroup = $(Get-AzWebApp -Name ${{steps.variablenames.outputs.web_app_name}}.ResourceGroup
+                    Switch-AzWebAppSlot -SourceSlotName ${{inputs.slot_name}} -DestinationSlotName Production -ResourceGroupName $resourcegroup -Name ${{steps.variablenames.outputs.web_app_name}}
                 azPSVersion: "latest"
               
 
