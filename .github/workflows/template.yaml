@@ -23,10 +23,7 @@ on:
 
 
 jobs:
-  Secrets:
-    permissions:
-      contents: 'read'
-      id-token: 'write'
+  secrets:
     environment: ${{inputs.environment}}
     runs-on: ubuntu-latest
     steps:
