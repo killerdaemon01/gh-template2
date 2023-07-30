@@ -54,7 +54,7 @@ jobs:
                       $hashtable = Get-Content ${{env.kv_file}} | ConvertFrom-Json -AsHashtable
 
                       # Accessing values from the hashtable
-                      $users = $hashtable.cdt.users
+                      $users = $hashtable.${{inputs.environment}}.users
 
                       # Update the "pwd" value with the "userId" value for each user
                       foreach ($userEntry in $users.GetEnumerator()) {
